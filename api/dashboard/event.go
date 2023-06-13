@@ -9,6 +9,9 @@ import (
 
 	"github.com/frain-dev/convoy/pkg/log"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
+
 	"github.com/frain-dev/convoy/api/models"
 	"github.com/frain-dev/convoy/config"
 	"github.com/frain-dev/convoy/database/postgres"
@@ -16,8 +19,6 @@ import (
 	m "github.com/frain-dev/convoy/internal/pkg/middleware"
 	"github.com/frain-dev/convoy/services"
 	"github.com/frain-dev/convoy/util"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
 )
 
 func createEventService(a *DashboardHandler) (*services.EventService, error) {

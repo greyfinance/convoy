@@ -10,14 +10,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
+
 	"github.com/frain-dev/convoy/internal/pkg/apm"
 	"github.com/frain-dev/convoy/pkg/log"
-	"github.com/newrelic/go-agent/v3/newrelic"
 
 	"github.com/frain-dev/convoy/auth"
 	"github.com/frain-dev/convoy/internal/pkg/metrics"
 
 	"github.com/felixge/httpsnoop"
+
 	"github.com/frain-dev/convoy/api/types"
 	"github.com/frain-dev/convoy/auth/realm_chain"
 	"github.com/frain-dev/convoy/config"
@@ -94,6 +96,46 @@ func JsonResponse(next http.Handler) http.Handler {
 		w.Header().Set("Content-Type", "application/json")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func RequiresAdminRoleAndAbove() func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authUser := GetAuthUserFromContext(r.Context())
+			if authUser == nil {
+				_ = render.Render(w, r, util.NewErrorResponse("authorization failed", http.StatusUnauthorized))
+				return
+			}
+
+			if authUser.Role.Type == auth.RoleMember {
+				log.FromContext(r.Context()).Error("insufficient permission to perform request")
+				_ = render.Render(w, r, util.NewErrorResponse("insufficient permission", http.StatusUnauthorized))
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+func RequiresSuperuserRole() func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			authUser := GetAuthUserFromContext(r.Context())
+			if authUser == nil {
+				_ = render.Render(w, r, util.NewErrorResponse("authorization failed", http.StatusUnauthorized))
+				return
+			}
+
+			if authUser.Role.Type == auth.RoleMember || authUser.Role.Type == auth.RoleAdmin || authUser.Role.Type == auth.RoleAPI {
+				log.FromContext(r.Context()).Error("insufficient permission to perform request")
+				_ = render.Render(w, r, util.NewErrorResponse("insufficient permission", http.StatusUnauthorized))
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func RequireAuth() func(next http.Handler) http.Handler {
