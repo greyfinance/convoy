@@ -8,6 +8,11 @@ import (
 	"strings"
 
 	authz "github.com/Subomi/go-authz"
+	"github.com/go-chi/chi/v5"
+	chiMiddleware "github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/frain-dev/convoy/api/dashboard"
 	"github.com/frain-dev/convoy/api/policies"
 	portalapi "github.com/frain-dev/convoy/api/portal-api"
@@ -17,10 +22,6 @@ import (
 	"github.com/frain-dev/convoy/internal/pkg/metrics"
 	"github.com/frain-dev/convoy/internal/pkg/middleware"
 	redisqueue "github.com/frain-dev/convoy/queue/redis"
-	"github.com/go-chi/chi/v5"
-	chiMiddleware "github.com/go-chi/chi/v5/middleware"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 //go:embed dashboard/ui/build
@@ -140,10 +141,20 @@ func (a *ApplicationHandler) RegisterPolicy() error {
 
 func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 	dh := &dashboard.DashboardHandler{A: a.A}
+
 	uiMiddlewares := chi.Middlewares{
 		middleware.JsonResponse,
 		chiMiddleware.Maybe(middleware.RequireAuth(), shouldAuthRoute),
 	}
+
+	adminRoleMiddlewares := chi.Chain(append(
+		uiMiddlewares,
+		chi.Middlewares{middleware.RequiresAdminRoleAndAbove()}...)...)
+
+	superUserRoleMiddlewares := chi.Chain(append(
+		uiMiddlewares,
+		chi.Middlewares{middleware.RequiresSuperuserRole()}...)...)
+
 	uiMiddlewaresWithPagination := chi.Chain(append(
 		uiMiddlewares,
 		chi.Middlewares{middleware.Pagination}...)...)
@@ -168,48 +179,48 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 	r.Method(GET, "/ui/users/{userID}/security", uiMiddlewaresWithPagination.HandlerFunc(dh.GetAPIKeys))
 
 	r.Method(GET, "/ui/organisations", uiMiddlewaresWithPagination.HandlerFunc(dh.GetOrganisationsPaged))
-	r.Method(POST, "/ui/organisations", uiMiddlewares.HandlerFunc(dh.CreateOrganisation))
+	r.Method(POST, "/ui/organisations", superUserRoleMiddlewares.HandlerFunc(dh.CreateOrganisation))
 	r.Method(GET, "/ui/organisations/{orgID}", uiMiddlewares.HandlerFunc(dh.GetOrganisation))
 	r.Method(GET, "/ui/organisations/{orgID}", uiMiddlewares.HandlerFunc(dh.GetOrganisation))
-	r.Method(PUT, "/ui/organisations/{orgID}", uiMiddlewares.HandlerFunc(dh.UpdateOrganisation))
-	r.Method(DELETE, "/ui/organisations/{orgID}", uiMiddlewares.HandlerFunc(dh.DeleteOrganisation))
-	r.Method(POST, "/ui/organisations/{orgID}/invites", uiMiddlewares.HandlerFunc(dh.InviteUserToOrganisation))
+	r.Method(PUT, "/ui/organisations/{orgID}", superUserRoleMiddlewares.HandlerFunc(dh.UpdateOrganisation))
+	r.Method(DELETE, "/ui/organisations/{orgID}", superUserRoleMiddlewares.HandlerFunc(dh.DeleteOrganisation))
+	r.Method(POST, "/ui/organisations/{orgID}/invites", adminRoleMiddlewares.HandlerFunc(dh.InviteUserToOrganisation))
 	r.Method(GET, "/ui/organisations/{orgID}/invites/pending", uiMiddlewaresWithPagination.HandlerFunc(dh.GetPendingOrganisationInvites))
-	r.Method(POST, "/ui/organisations/{orgID}/invites/{inviteID}/resend", uiMiddlewares.HandlerFunc(dh.ResendOrganizationInvite))
-	r.Method(POST, "/ui/organisations/{orgID}/invites/{inviteID}/cancel", uiMiddlewares.HandlerFunc(dh.CancelOrganizationInvite))
+	r.Method(POST, "/ui/organisations/{orgID}/invites/{inviteID}/resend", adminRoleMiddlewares.HandlerFunc(dh.ResendOrganizationInvite))
+	r.Method(POST, "/ui/organisations/{orgID}/invites/{inviteID}/cancel", adminRoleMiddlewares.HandlerFunc(dh.CancelOrganizationInvite))
 
 	r.Method(GET, "/ui/organisations/{orgID}/members", uiMiddlewaresWithPagination.HandlerFunc(dh.GetOrganisationMembers))
 	r.Method(GET, "/ui/organisations/{orgID}/members/{memberID}", uiMiddlewares.HandlerFunc(dh.GetOrganisationMember))
-	r.Method(PUT, "/ui/organisations/{orgID}/members/{memberID}", uiMiddlewares.HandlerFunc(dh.UpdateOrganisationMember))
-	r.Method(DELETE, "/ui/organisations/{orgID}/members/{memberID}", uiMiddlewares.HandlerFunc(dh.DeleteOrganisationMember))
+	r.Method(PUT, "/ui/organisations/{orgID}/members/{memberID}", superUserRoleMiddlewares.HandlerFunc(dh.UpdateOrganisationMember))
+	r.Method(DELETE, "/ui/organisations/{orgID}/members/{memberID}", superUserRoleMiddlewares.HandlerFunc(dh.DeleteOrganisationMember))
 
-	r.Method(POST, "/ui/organisations/{orgID}/projects", uiMiddlewares.HandlerFunc(dh.CreateProject))
+	r.Method(POST, "/ui/organisations/{orgID}/projects", adminRoleMiddlewares.HandlerFunc(dh.CreateProject))
 	r.Method(GET, "/ui/organisations/{orgID}/projects", uiMiddlewaresWithPagination.HandlerFunc(dh.GetProjects))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}", uiMiddlewares.HandlerFunc(dh.GetProject))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/stats", uiMiddlewares.HandlerFunc(dh.GetProjectStatistics))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}", uiMiddlewares.HandlerFunc(dh.UpdateProject))
-	r.Method(DELETE, "/ui/organisations/{orgID}/projects/{projectID}", uiMiddlewares.HandlerFunc(dh.DeleteProject))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/security/keys/regenerate", uiMiddlewares.HandlerFunc(dh.RegenerateProjectAPIKey))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}", adminRoleMiddlewares.HandlerFunc(dh.UpdateProject))
+	r.Method(DELETE, "/ui/organisations/{orgID}/projects/{projectID}", superUserRoleMiddlewares.HandlerFunc(dh.DeleteProject))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/security/keys/regenerate", superUserRoleMiddlewares.HandlerFunc(dh.RegenerateProjectAPIKey))
 
-	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/endpoints", uiMiddlewares.HandlerFunc(dh.CreateEndpoint))
+	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/endpoints", adminRoleMiddlewares.HandlerFunc(dh.CreateEndpoint))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/endpoints", uiMiddlewaresWithPagination.HandlerFunc(dh.GetEndpoints))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}", uiMiddlewares.HandlerFunc(dh.GetEndpoint))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}", uiMiddlewares.HandlerFunc(dh.UpdateEndpoint))
-	r.Method(DELETE, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}", uiMiddlewares.HandlerFunc(dh.DeleteEndpoint))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}/toggle_status", uiMiddlewares.HandlerFunc(dh.ToggleEndpointStatus))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}/expire_secret", uiMiddlewares.HandlerFunc(dh.ExpireSecret))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}/pause", uiMiddlewares.HandlerFunc(dh.PauseEndpoint))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}", adminRoleMiddlewares.HandlerFunc(dh.UpdateEndpoint))
+	r.Method(DELETE, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}", superUserRoleMiddlewares.HandlerFunc(dh.DeleteEndpoint))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}/toggle_status", adminRoleMiddlewares.HandlerFunc(dh.ToggleEndpointStatus))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}/expire_secret", adminRoleMiddlewares.HandlerFunc(dh.ExpireSecret))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/endpoints/{endpointID}/pause", adminRoleMiddlewares.HandlerFunc(dh.PauseEndpoint))
 
-	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/events", uiMiddlewares.HandlerFunc(dh.CreateEndpointEvent))
+	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/events", adminRoleMiddlewares.HandlerFunc(dh.CreateEndpointEvent))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/events", uiMiddlewaresWithPagination.HandlerFunc(dh.GetEventsPaged))
-	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/events/batchreplay", uiMiddlewares.HandlerFunc(dh.BatchReplayEvents))
+	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/events/batchreplay", superUserRoleMiddlewares.HandlerFunc(dh.BatchReplayEvents))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/events/countbatchreplayevents", uiMiddlewares.HandlerFunc(dh.CountAffectedEvents))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/events/{eventID}", uiMiddlewares.HandlerFunc(dh.GetEndpointEvent))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/events/{eventID}/replay", uiMiddlewares.HandlerFunc(dh.ReplayEndpointEvent))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/events/{eventID}/replay", superUserRoleMiddlewares.HandlerFunc(dh.ReplayEndpointEvent))
 
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries", uiMiddlewaresWithPagination.HandlerFunc(dh.GetEventDeliveriesPaged))
-	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/forceresend", uiMiddlewares.HandlerFunc(dh.ForceResendEventDeliveries))
-	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/batchretry", uiMiddlewares.HandlerFunc(dh.BatchRetryEventDelivery))
+	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/forceresend", superUserRoleMiddlewares.HandlerFunc(dh.ForceResendEventDeliveries))
+	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/batchretry", superUserRoleMiddlewares.HandlerFunc(dh.BatchRetryEventDelivery))
 	r.Method(GET,
 		"/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/countbatchretryevents",
 		uiMiddlewares.HandlerFunc(dh.CountAffectedEventDeliveries))
@@ -220,7 +231,7 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 
 	r.Method(PUT,
 		"/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/{eventDeliveryID}/resend",
-		uiMiddlewares.HandlerFunc(dh.ResendEventDelivery))
+		superUserRoleMiddlewares.HandlerFunc(dh.ResendEventDelivery))
 
 	r.Method(GET,
 		"/ui/organisations/{orgID}/projects/{projectID}/eventdeliveries/{eventDeliveryID}/deliveryattempts",
@@ -232,11 +243,11 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 
 	r.Method(POST,
 		"/ui/organisations/{orgID}/projects/{projectID}/subscriptions",
-		uiMiddlewares.HandlerFunc(dh.CreateSubscription))
+		adminRoleMiddlewares.HandlerFunc(dh.CreateSubscription))
 
 	r.Method(POST,
 		"/ui/organisations/{orgID}/projects/{projectID}/subscriptions/test_filter",
-		uiMiddlewares.HandlerFunc(dh.TestSubscriptionFilter))
+		adminRoleMiddlewares.HandlerFunc(dh.TestSubscriptionFilter))
 
 	r.Method(GET,
 		"/ui/organisations/{orgID}/projects/{projectID}/subscriptions",
@@ -244,7 +255,7 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 
 	r.Method(DELETE,
 		"/ui/organisations/{orgID}/projects/{projectID}/subscriptions/{subscriptionID}",
-		uiMiddlewares.HandlerFunc(dh.DeleteSubscription))
+		superUserRoleMiddlewares.HandlerFunc(dh.DeleteSubscription))
 
 	r.Method(GET,
 		"/ui/organisations/{orgID}/projects/{projectID}/subscriptions/{subscriptionID}",
@@ -252,13 +263,13 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 
 	r.Method(PUT,
 		"/ui/organisations/{orgID}/projects/{projectID}/subscriptions/{subscriptionID}",
-		uiMiddlewares.HandlerFunc(dh.UpdateSubscription))
+		adminRoleMiddlewares.HandlerFunc(dh.UpdateSubscription))
 
-	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/sources", uiMiddlewares.HandlerFunc(dh.CreateSource))
+	r.Method(POST, "/ui/organisations/{orgID}/projects/{projectID}/sources", adminRoleMiddlewares.HandlerFunc(dh.CreateSource))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/sources/{sourceID}", uiMiddlewares.HandlerFunc(dh.GetSourceByID))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/sources", uiMiddlewaresWithPagination.HandlerFunc(dh.LoadSourcesPaged))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/sources/{sourceID}", uiMiddlewares.HandlerFunc(dh.UpdateSource))
-	r.Method(DELETE, "/ui/organisations/{orgID}/projects/{projectID}/sources/{sourceID}", uiMiddlewares.HandlerFunc(dh.DeleteSource))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/sources/{sourceID}", adminRoleMiddlewares.HandlerFunc(dh.UpdateSource))
+	r.Method(DELETE, "/ui/organisations/{orgID}/projects/{projectID}/sources/{sourceID}", superUserRoleMiddlewares.HandlerFunc(dh.DeleteSource))
 
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/dashboard/summary", uiMiddlewares.HandlerFunc(dh.GetDashboardSummary))
 
@@ -283,17 +294,17 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 		uiMiddlewares.HandlerFunc(dh.RevokePortalLink))
 
 	r.Method(GET,
-		"/ui/configuration", uiMiddlewares.HandlerFunc(dh.LoadConfiguration))
+		"/ui/configuration", superUserRoleMiddlewares.HandlerFunc(dh.LoadConfiguration))
 
 	r.Method(POST,
-		"/ui/configuration", uiMiddlewares.HandlerFunc(dh.CreateConfiguration))
+		"/ui/configuration", superUserRoleMiddlewares.HandlerFunc(dh.CreateConfiguration))
 
 	r.Method(PUT,
-		"/ui/configuration", uiMiddlewares.HandlerFunc(dh.UpdateConfiguration))
+		"/ui/configuration", superUserRoleMiddlewares.HandlerFunc(dh.UpdateConfiguration))
 
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/meta-events", uiMiddlewaresWithPagination.HandlerFunc(dh.GetMetaEventsPaged))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/meta-events/{metaEventID}", uiMiddlewares.HandlerFunc(dh.GetMetaEvent))
-	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/meta-events/{metaEventID}/resend", uiMiddlewares.HandlerFunc(dh.ResendMetaEvent))
+	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/meta-events/{metaEventID}/resend", superUserRoleMiddlewares.HandlerFunc(dh.ResendMetaEvent))
 }
 
 var guestRoutes = []string{

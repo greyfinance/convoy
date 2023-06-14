@@ -1,65 +1,67 @@
 version: "3"
 
 services:
-    web:
-        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
-        command: ["/start.sh"]
-        volumes:
-            - ./convoy.json:/convoy.json
-        restart: on-failure
-        ports:
-          - "5005:5005"
-        depends_on:
-            - postgres
-            - redis_server
-            - typesense
-
-    scheduler:
-        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
-        command: ["./cmd", "scheduler", "--config", "convoy.json"]
-        volumes:
-            - ./convoy.json:/convoy.json
-        restart: on-failure
-        depends_on:
-            - postgres
-            - redis_server
-            - typesense
-
-    worker:
-        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
-        command: ["./cmd", "worker", "--config", "convoy.json"]
-        volumes:
-            - ./convoy.json:/convoy.json
-        restart: on-failure
-        depends_on:
-            - postgres
-            - redis_server
-            - typesense
-
-    stream:
-        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
-        command: ["./cmd", "stream", "--config", "convoy.json"]
-        volumes:
-            - ./convoy.json:/convoy.json
-        restart: on-failure
-        depends_on:
-            - postgres
-            - redis_server
-
-    ingest:
-      image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
-      command: ["./cmd", "ingest", "--config", "convoy.json"]
-      volumes:
-        - ./convoy.json:/convoy.json
-      restart: on-failure
-      depends_on:
-        - postgres
-        - redis_server
-        - typesense
+#    web:
+#        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
+#        command: ["/start.sh"]
+#        volumes:
+#            - ./convoy.json:/convoy.json
+#        restart: on-failure
+#        ports:
+#          - "5005:5005"
+#        depends_on:
+#            - postgres
+#            - redis_server
+#            - typesense
+#
+#    scheduler:
+#        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
+#        command: ["./cmd", "scheduler", "--config", "convoy.json"]
+#        volumes:
+#            - ./convoy.json:/convoy.json
+#        restart: on-failure
+#        depends_on:
+#            - postgres
+#            - redis_server
+#            - typesense
+#
+#    worker:
+#        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
+#        command: ["./cmd", "worker", "--config", "convoy.json"]
+#        volumes:
+#            - ./convoy.json:/convoy.json
+#        restart: on-failure
+#        depends_on:
+#            - postgres
+#            - redis_server
+#            - typesense
+#
+#    stream:
+#        image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
+#        command: ["./cmd", "stream", "--config", "convoy.json"]
+#        volumes:
+#            - ./convoy.json:/convoy.json
+#        restart: on-failure
+#        depends_on:
+#            - postgres
+#            - redis_server
+#
+#    ingest:
+#      image: docker.cloudsmith.io/convoy/convoy/frain-dev/convoy:v23.05.3
+#      command: ["./cmd", "ingest", "--config", "convoy.json"]
+#      volumes:
+#        - ./convoy.json:/convoy.json
+#      restart: on-failure
+#      depends_on:
+#        - postgres
+#        - redis_server
+#        - typesense
 
     postgres:
       image: postgres:15.2-alpine
       restart: unless-stopped
+      ports:
+          - "5432:5432"
       environment:
         POSTGRES_DB: convoy
         POSTGRES_USER: convoy
@@ -71,6 +73,8 @@ services:
     redis_server:
         image: redis:alpine
         restart: always
+        ports:
+            - "6379:6379"
         volumes:
           - ./redis_data:/data
 

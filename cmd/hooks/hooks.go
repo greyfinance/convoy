@@ -4,13 +4,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"time"
+
+	"github.com/oklog/ulid/v2"
+	"gopkg.in/guregu/null.v4"
+
 	dbhook "github.com/frain-dev/convoy/database/hooks"
 	"github.com/frain-dev/convoy/database/listener"
 	"github.com/frain-dev/convoy/queue"
-	"github.com/oklog/ulid/v2"
-	"gopkg.in/guregu/null.v4"
-	"os"
-	"time"
+
+	"github.com/newrelic/go-agent/v3/newrelic"
+	"github.com/spf13/cobra"
 
 	"github.com/frain-dev/convoy"
 	"github.com/frain-dev/convoy/cache"
@@ -24,8 +29,6 @@ import (
 	"github.com/frain-dev/convoy/pkg/log"
 	redisQueue "github.com/frain-dev/convoy/queue/redis"
 	"github.com/frain-dev/convoy/tracer"
-	"github.com/newrelic/go-agent/v3/newrelic"
-	"github.com/spf13/cobra"
 )
 
 func PreRun(app *cli.App, db *postgres.Postgres) func(cmd *cobra.Command, args []string) error {
