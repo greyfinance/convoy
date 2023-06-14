@@ -19,7 +19,7 @@
         "version": "0.9.0"
     },
     "host": "dashboard.getconvoy.io",
-    "basePath": "/",
+    "basePath": "/api",
     "paths": {
         "/v1/projects": {
             "get": {
@@ -68,7 +68,7 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/definitions/datastore.Project"
+                                                "$ref": "#/definitions/models.ProjectResponse"
                                             }
                                         }
                                     }
@@ -163,7 +163,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Project"
+                            "$ref": "#/definitions/models.CreateProject"
                         }
                     }
                 ],
@@ -179,7 +179,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/datastore.Project"
+                                            "$ref": "#/definitions/models.CreateProjectResponse"
                                         }
                                     }
                                 }
@@ -282,7 +282,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/datastore.Project"
+                                            "$ref": "#/definitions/models.ProjectResponse"
                                         }
                                     }
                                 }
@@ -376,7 +376,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Project"
+                            "$ref": "#/definitions/models.UpdateProject"
                         }
                     }
                 ],
@@ -392,7 +392,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/datastore.Project"
+                                            "$ref": "#/definitions/models.ProjectResponse"
                                         }
                                     }
                                 }
@@ -3266,10 +3266,17 @@
                     "application/json"
                 ],
                 "tags": [
-                    "MetaEvents"
+                    "Meta Events"
                 ],
                 "summary": "List all meta events",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "type": "string",
                         "description": "start date",
@@ -3413,7 +3420,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "MetaEvents"
+                    "Meta Events"
                 ],
                 "summary": "Retrieve a meta event",
                 "parameters": [
@@ -3535,7 +3542,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "MetaEvents"
+                    "Meta Events"
                 ],
                 "summary": "Retry meta event",
                 "parameters": [
@@ -4253,20 +4260,37 @@
                     },
                     {
                         "type": "string",
-                        "description": "results per page",
-                        "name": "perPage",
+                        "example": "01H0JA5MEES38RRK3HTEJC647K",
+                        "description": "A pagination cursor to fetch the next page of a list",
+                        "name": "next_page_cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "example": 20,
+                        "description": "The number of items to return per page",
+                        "name": "per_page",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "page number",
-                        "name": "page",
+                        "example": "01H0JATTVCXZK8FRDX1M1JN3QY",
+                        "description": "A pagination cursor to fetch the previous page of a list",
+                        "name": "prev_page_cursor",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "sort order",
-                        "name": "sort",
+                        "example": "twitter",
+                        "description": "The custom source provider e.g. twitter, shopify",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "example": "http",
+                        "description": "The source type e.g. http, pub_sub",
+                        "name": "type",
                         "in": "query"
                     }
                 ],
@@ -4292,7 +4316,7 @@
                                                         "content": {
                                                             "type": "array",
                                                             "items": {
-                                                                "$ref": "#/definitions/models.Source"
+                                                                "$ref": "#/definitions/models.SourceResponse"
                                                             }
                                                         }
                                                     }
@@ -4391,7 +4415,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Source"
+                            "$ref": "#/definitions/models.CreateSource"
                         }
                     }
                 ],
@@ -4407,7 +4431,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Source"
+                                            "$ref": "#/definitions/models.SourceResponse"
                                         }
                                     }
                                 }
@@ -4517,7 +4541,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Source"
+                                            "$ref": "#/definitions/models.SourceResponse"
                                         }
                                     }
                                 }
@@ -4618,7 +4642,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/models.Source"
+                            "$ref": "#/definitions/models.UpdateSource"
                         }
                     }
                 ],
@@ -4634,7 +4658,7 @@
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/models.Source"
+                                            "$ref": "#/definitions/models.SourceResponse"
                                         }
                                     }
                                 }
@@ -5575,6 +5599,17 @@
                 }
             }
         },
+        "datastore.CustomResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                }
+            }
+        },
         "datastore.DeliveryAttempt": {
             "type": "object",
             "properties": {
@@ -5989,6 +6024,21 @@
                 "type": "string"
             }
         },
+        "datastore.KeyType": {
+            "type": "string",
+            "enum": [
+                "project",
+                "app_portal",
+                "cli",
+                "personal_key"
+            ],
+            "x-enum-varnames": [
+                "ProjectKey",
+                "AppPortalKey",
+                "CLIKey",
+                "PersonalKey"
+            ]
+        },
         "datastore.M": {
             "type": "object",
             "additionalProperties": true
@@ -6107,6 +6157,17 @@
                 }
             }
         },
+        "datastore.PageDirection": {
+            "type": "string",
+            "enum": [
+                "next",
+                "prev"
+            ],
+            "x-enum-varnames": [
+                "Next",
+                "Prev"
+            ]
+        },
         "datastore.PaginationData": {
             "type": "object",
             "properties": {
@@ -6123,44 +6184,6 @@
                     "type": "integer"
                 },
                 "prev_page_cursor": {
-                    "type": "string"
-                }
-            }
-        },
-        "datastore.Project": {
-            "type": "object",
-            "properties": {
-                "config": {
-                    "$ref": "#/definitions/datastore.ProjectConfig"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "deleted_at": {
-                    "type": "string"
-                },
-                "logo_url": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "organisation_id": {
-                    "type": "string"
-                },
-                "retained_events": {
-                    "type": "integer"
-                },
-                "statistics": {
-                    "$ref": "#/definitions/datastore.ProjectStatistics"
-                },
-                "type": {
-                    "$ref": "#/definitions/datastore.ProjectType"
-                },
-                "uid": {
-                    "type": "string"
-                },
-                "updated_at": {
                     "type": "string"
                 }
             }
@@ -6371,6 +6394,9 @@
                 "created_at": {
                     "type": "string"
                 },
+                "custom_response": {
+                    "$ref": "#/definitions/datastore.CustomResponse"
+                },
                 "deleted_at": {
                     "type": "string"
                 },
@@ -6578,6 +6604,122 @@
             "additionalProperties": {
                 "type": "array",
                 "items": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.APIKeyResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "key_type": {
+                    "$ref": "#/definitions/datastore.KeyType"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/models.Role"
+                },
+                "uid": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.ApiKey": {
+            "type": "object",
+            "properties": {
+                "header_name": {
+                    "type": "string"
+                },
+                "header_value": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.BasicAuth": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateProject": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/models.ProjectConfig"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.CreateProjectResponse": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "$ref": "#/definitions/models.APIKeyResponse"
+                },
+                "project": {
+                    "$ref": "#/definitions/models.ProjectResponse"
+                }
+            }
+        },
+        "models.CreateSource": {
+            "type": "object",
+            "properties": {
+                "custom_response": {
+                    "$ref": "#/definitions/models.CustomResponse"
+                },
+                "is_disabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/datastore.SourceProvider"
+                },
+                "pub_sub": {
+                    "$ref": "#/definitions/models.PubSubConfig"
+                },
+                "type": {
+                    "$ref": "#/definitions/datastore.SourceType"
+                },
+                "verifier": {
+                    "$ref": "#/definitions/models.VerifierConfig"
+                }
+            }
+        },
+        "models.CustomResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "content_type": {
                     "type": "string"
                 }
             }
@@ -6806,6 +6948,63 @@
                 "header": {}
             }
         },
+        "models.GooglePubSubConfig": {
+            "type": "object",
+            "properties": {
+                "project_id": {
+                    "type": "string"
+                },
+                "service_account": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "subscription_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.HMac": {
+            "type": "object",
+            "properties": {
+                "encoding": {
+                    "$ref": "#/definitions/datastore.EncodingType"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "header": {
+                    "type": "string"
+                },
+                "secret": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.MetaEventConfiguration": {
+            "type": "object",
+            "properties": {
+                "event_type": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "secret": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
         "models.PortalLink": {
             "type": "object",
             "properties": {
@@ -6864,11 +7063,49 @@
                 }
             }
         },
-        "models.Project": {
+        "models.ProjectConfig": {
+            "type": "object",
+            "properties": {
+                "disable_endpoint": {
+                    "type": "boolean"
+                },
+                "max_payload_read_size": {
+                    "type": "integer"
+                },
+                "meta_event": {
+                    "$ref": "#/definitions/models.MetaEventConfiguration"
+                },
+                "ratelimit": {
+                    "$ref": "#/definitions/models.RateLimitConfiguration"
+                },
+                "replay_attacks_prevention_enabled": {
+                    "type": "boolean"
+                },
+                "retention_policy": {
+                    "$ref": "#/definitions/models.RetentionPolicyConfiguration"
+                },
+                "retention_policy_enabled": {
+                    "type": "boolean"
+                },
+                "signature": {
+                    "$ref": "#/definitions/models.SignatureConfiguration"
+                },
+                "strategy": {
+                    "$ref": "#/definitions/models.StrategyConfiguration"
+                }
+            }
+        },
+        "models.ProjectResponse": {
             "type": "object",
             "properties": {
                 "config": {
                     "$ref": "#/definitions/datastore.ProjectConfig"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "deleted_at": {
+                    "type": "string"
                 },
                 "logo_url": {
                     "type": "string"
@@ -6876,8 +7113,59 @@
                 "name": {
                     "type": "string"
                 },
+                "organisation_id": {
+                    "type": "string"
+                },
+                "retained_events": {
+                    "type": "integer"
+                },
+                "statistics": {
+                    "$ref": "#/definitions/datastore.ProjectStatistics"
+                },
                 "type": {
                     "$ref": "#/definitions/datastore.ProjectType"
+                },
+                "uid": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.PubSubConfig": {
+            "type": "object",
+            "properties": {
+                "google": {
+                    "$ref": "#/definitions/models.GooglePubSubConfig"
+                },
+                "sqs": {
+                    "$ref": "#/definitions/models.SQSPubSubConfig"
+                },
+                "type": {
+                    "$ref": "#/definitions/datastore.PubSubType"
+                },
+                "workers": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.RateLimitConfiguration": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "duration": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.RetentionPolicyConfiguration": {
+            "type": "object",
+            "properties": {
+                "policy": {
+                    "type": "string"
                 }
             }
         },
@@ -6898,17 +7186,103 @@
                 }
             }
         },
-        "models.Source": {
+        "models.Role": {
             "type": "object",
             "properties": {
+                "app": {
+                    "type": "string"
+                },
+                "project": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SQSPubSubConfig": {
+            "type": "object",
+            "properties": {
+                "access_key_id": {
+                    "type": "string"
+                },
+                "default_region": {
+                    "type": "string"
+                },
+                "queue_name": {
+                    "type": "string"
+                },
+                "secret_key": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SignatureConfiguration": {
+            "type": "object",
+            "properties": {
+                "header": {
+                    "$ref": "#/definitions/config.SignatureHeaderProvider"
+                },
+                "versions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.SignatureVersion"
+                    }
+                }
+            }
+        },
+        "models.SignatureVersion": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "encoding": {
+                    "type": "string"
+                },
+                "hash": {
+                    "type": "string"
+                },
+                "uid": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.SourceResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "custom_response": {
+                    "$ref": "#/definitions/datastore.CustomResponse"
+                },
+                "deleted_at": {
+                    "type": "string"
+                },
+                "forward_headers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "is_disabled": {
                     "type": "boolean"
+                },
+                "mask_id": {
+                    "type": "string"
                 },
                 "name": {
                     "type": "string"
                 },
+                "project_id": {
+                    "type": "string"
+                },
                 "provider": {
                     "$ref": "#/definitions/datastore.SourceProvider"
+                },
+                "provider_config": {
+                    "$ref": "#/definitions/datastore.ProviderConfig"
                 },
                 "pub_sub": {
                     "$ref": "#/definitions/datastore.PubSubConfig"
@@ -6916,8 +7290,31 @@
                 "type": {
                     "$ref": "#/definitions/datastore.SourceType"
                 },
+                "uid": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
                 "verifier": {
                     "$ref": "#/definitions/datastore.VerifierConfig"
+                }
+            }
+        },
+        "models.StrategyConfiguration": {
+            "type": "object",
+            "properties": {
+                "duration": {
+                    "type": "integer"
+                },
+                "retry_count": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
                 }
             }
         },
@@ -6959,6 +7356,83 @@
                 },
                 "schema": {
                     "$ref": "#/definitions/models.FilterSchema"
+                }
+            }
+        },
+        "models.UpdateCustomResponse": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "content_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UpdateProject": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/models.ProjectConfig"
+                },
+                "logo_url": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rate_limit": {
+                    "type": "integer"
+                },
+                "rate_limit_duration": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.UpdateSource": {
+            "type": "object",
+            "properties": {
+                "custom_response": {
+                    "$ref": "#/definitions/models.UpdateCustomResponse"
+                },
+                "forward_headers": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "is_disabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pub_sub": {
+                    "$ref": "#/definitions/models.PubSubConfig"
+                },
+                "type": {
+                    "$ref": "#/definitions/datastore.SourceType"
+                },
+                "verifier": {
+                    "$ref": "#/definitions/models.VerifierConfig"
+                }
+            }
+        },
+        "models.VerifierConfig": {
+            "type": "object",
+            "properties": {
+                "api_key": {
+                    "$ref": "#/definitions/models.ApiKey"
+                },
+                "basic_auth": {
+                    "$ref": "#/definitions/models.BasicAuth"
+                },
+                "hmac": {
+                    "$ref": "#/definitions/models.HMac"
+                },
+                "type": {
+                    "$ref": "#/definitions/datastore.VerifierType"
                 }
             }
         },

@@ -176,7 +176,7 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 	r.Method(PUT, "/ui/users/{userID}/password", uiMiddlewares.HandlerFunc(dh.UpdatePassword))
 	r.Method(POST, "/ui/users/{userID}/security/personal_api_keys", uiMiddlewares.HandlerFunc(dh.CreatePersonalAPIKey))
 	r.Method(PUT, "/ui/users/{userID}/security/{keyID}/revoke", uiMiddlewares.HandlerFunc(dh.RevokePersonalAPIKey))
-	r.Method(GET, "/ui/users/{userID}/security/", uiMiddlewaresWithPagination.HandlerFunc(dh.GetAPIKeys))
+	r.Method(GET, "/ui/users/{userID}/security", uiMiddlewaresWithPagination.HandlerFunc(dh.GetAPIKeys))
 
 	r.Method(GET, "/ui/organisations", uiMiddlewaresWithPagination.HandlerFunc(dh.GetOrganisationsPaged))
 	r.Method(POST, "/ui/organisations", superUserRoleMiddlewares.HandlerFunc(dh.CreateOrganisation))
@@ -305,7 +305,6 @@ func (a *ApplicationHandler) RegisterDashboardRoutes(r *chi.Mux) {
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/meta-events", uiMiddlewaresWithPagination.HandlerFunc(dh.GetMetaEventsPaged))
 	r.Method(GET, "/ui/organisations/{orgID}/projects/{projectID}/meta-events/{metaEventID}", uiMiddlewares.HandlerFunc(dh.GetMetaEvent))
 	r.Method(PUT, "/ui/organisations/{orgID}/projects/{projectID}/meta-events/{metaEventID}/resend", superUserRoleMiddlewares.HandlerFunc(dh.ResendMetaEvent))
-
 }
 
 var guestRoutes = []string{

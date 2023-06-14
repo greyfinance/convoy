@@ -14,19 +14,12 @@ import (
 	"github.com/frain-dev/convoy/pkg/httpheader"
 	"github.com/frain-dev/convoy/pkg/verifier"
 	"github.com/frain-dev/convoy/queue"
-	"github.com/frain-dev/convoy/services"
 	"github.com/frain-dev/convoy/util"
 	"github.com/frain-dev/convoy/worker/task"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/oklog/ulid/v2"
 )
-
-func createSourceService(a *ApplicationHandler) *services.SourceService {
-	sourceRepo := postgres.NewSourceRepo(a.A.DB)
-
-	return services.NewSourceService(sourceRepo, a.A.Cache)
-}
 
 func (a *ApplicationHandler) IngestEvent(w http.ResponseWriter, r *http.Request) {
 	// s.AppService.CountProjectApplications()
@@ -167,9 +160,25 @@ func (a *ApplicationHandler) IngestEvent(w http.ResponseWriter, r *http.Request)
 	err = a.A.Queue.Write(convoy.CreateEventProcessor, convoy.CreateEventQueue, job)
 	if err != nil {
 		a.A.Logger.WithError(err).Error("Error occurred sending new event to the queue")
+		_ = render.Render(w, r, util.NewErrorResponse(err.Error(), http.StatusBadRequest))
+		return
 	}
 
 	// 4. Return 200
+	if !util.IsStringEmpty(source.CustomResponse.Body) {
+		// send back custom response
+		if !util.IsStringEmpty(source.CustomResponse.ContentType) {
+			w.Header().Set("Content-Type", source.CustomResponse.ContentType)
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(source.CustomResponse.Body))
+			return
+		}
+
+		render.Status(r, http.StatusOK)
+		render.PlainText(w, r, source.CustomResponse.Body)
+		return
+
+	}
 	_ = render.Render(w, r, util.NewServerResponse("Event received", len(payload), http.StatusOK))
 }
 

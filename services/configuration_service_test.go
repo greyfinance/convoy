@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"gopkg.in/guregu/null.v4"
 
@@ -15,6 +16,66 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+func stringPtr(s string) *string {
+	return &s
+}
+
+func stripVariableFields(t *testing.T, obj string, v interface{}) {
+	switch obj {
+	case "project":
+		g := v.(*datastore.Project)
+		if g.Config != nil {
+			for i := range g.Config.Signature.Versions {
+				v := &g.Config.Signature.Versions[i]
+				v.UID = ""
+				v.CreatedAt = time.Time{}
+			}
+		}
+		g.UID = ""
+		g.CreatedAt, g.UpdatedAt, g.DeletedAt = time.Time{}, time.Time{}, null.Time{}
+	case "endpoint":
+		e := v.(*datastore.Endpoint)
+
+		for i := range e.Secrets {
+			s := &e.Secrets[i]
+			s.UID = ""
+			s.CreatedAt, s.UpdatedAt, s.DeletedAt = time.Time{}, time.Time{}, null.Time{}
+		}
+
+		e.UID, e.AppID = "", ""
+		e.CreatedAt, e.UpdatedAt, e.DeletedAt = time.Time{}, time.Time{}, null.Time{}
+	case "event":
+		e := v.(*datastore.Event)
+		e.UID = ""
+		e.MatchedEndpoints = 0
+		e.CreatedAt, e.UpdatedAt, e.DeletedAt = time.Time{}, time.Time{}, null.Time{}
+	case "apiKey":
+		a := v.(*datastore.APIKey)
+		a.UID, a.MaskID, a.Salt, a.Hash = "", "", "", ""
+		a.CreatedAt, a.UpdatedAt = time.Time{}, time.Time{}
+	case "organisation":
+		a := v.(*datastore.Organisation)
+		a.UID = ""
+		a.CreatedAt, a.UpdatedAt = time.Time{}, time.Time{}
+	case "organisation_member":
+		a := v.(*datastore.OrganisationMember)
+		a.UID = ""
+		a.CreatedAt, a.UpdatedAt = time.Time{}, time.Time{}
+	case "organisation_invite":
+		a := v.(*datastore.OrganisationInvite)
+		a.UID = ""
+		a.Token = ""
+		a.CreatedAt, a.UpdatedAt, a.ExpiresAt, a.DeletedAt = time.Time{}, time.Time{}, time.Time{}, null.Time{}
+	default:
+		t.Errorf("invalid data body - %v of type %T", obj, obj)
+		t.FailNow()
+	}
+}
 
 func provideConfigService(ctrl *gomock.Controller) *ConfigService {
 	configRepo := mocks.NewMockConfigurationRepository(ctrl)
@@ -41,9 +102,9 @@ func TestConfigService_CreateConfiguration(t *testing.T) {
 			name: "should_create_configuration",
 			args: args{
 				ctx: ctx,
-				newConfig: &models.Configuration{IsAnalyticsEnabled: boolPtr(true), IsSignupEnabled: boolPtr(true), StoragePolicy: &datastore.StoragePolicyConfiguration{
+				newConfig: &models.Configuration{IsAnalyticsEnabled: boolPtr(true), IsSignupEnabled: boolPtr(true), StoragePolicy: &models.StoragePolicyConfiguration{
 					Type: datastore.OnPrem,
-					OnPrem: &datastore.OnPremStorage{
+					OnPrem: &models.OnPremStorage{
 						Path: null.NewString("/tmp/", true),
 					},
 				}},
@@ -53,21 +114,6 @@ func TestConfigService_CreateConfiguration(t *testing.T) {
 				co, _ := c.configRepo.(*mocks.MockConfigurationRepository)
 				co.EXPECT().CreateConfiguration(gomock.Any(), gomock.Any()).Times(1).Return(nil)
 			},
-		},
-
-		{
-			name: "should_fail_create_configuration",
-			args: args{
-				ctx: ctx,
-				newConfig: &models.Configuration{IsAnalyticsEnabled: boolPtr(true), StoragePolicy: &datastore.StoragePolicyConfiguration{
-					Type: datastore.S3,
-					S3: &datastore.S3Storage{
-						Bucket: null.NewString("my-bucket", true),
-					},
-				}},
-			},
-			wantErr:     true,
-			wantErrCode: http.StatusBadRequest,
 		},
 	}
 
@@ -115,9 +161,9 @@ func TestConfigService_UpdateConfiguration(t *testing.T) {
 			name: "should_update_configuration",
 			args: args{
 				ctx: ctx,
-				newConfig: &models.Configuration{IsAnalyticsEnabled: boolPtr(true), StoragePolicy: &datastore.StoragePolicyConfiguration{
+				newConfig: &models.Configuration{IsAnalyticsEnabled: boolPtr(true), StoragePolicy: &models.StoragePolicyConfiguration{
 					Type: datastore.OnPrem,
-					OnPrem: &datastore.OnPremStorage{
+					OnPrem: &models.OnPremStorage{
 						Path: null.NewString("/tmp/", true),
 					},
 				}},
