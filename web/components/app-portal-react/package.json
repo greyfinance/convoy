@@ -23,7 +23,7 @@
 		"deploy": "gh-pages -d example/build"
 	},
 	"peerDependencies": {
-		"axios": "^0.26.0",
+		"axios": "^0.28.0",
 		"date-fns": "^2.28.0",
 		"moment": "^2.29.1",
 		"node-sass": "^7.0.1",
@@ -44,7 +44,7 @@
 		"sass": "^1.49.9"
 	},
 	"dependencies": {
-		"axios": "^0.26.0",
+		"axios": "^0.28.0",
 		"convoy-ui": "^0.0.2",
 		"date-fns": "^2.28.0",
 		"moment": "^2.29.1",
