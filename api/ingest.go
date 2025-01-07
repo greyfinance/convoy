@@ -220,7 +220,14 @@ func (a *ApplicationHandler) IngestEvent(w http.ResponseWriter, r *http.Request)
 		if !util.IsStringEmpty(source.CustomResponse.ContentType) {
 			w.Header().Set("Content-Type", source.CustomResponse.ContentType)
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(source.CustomResponse.Body))
+
+			customResp, err := extractCustomBody(r, source.CustomResponse.ContentType, source.CustomResponse.Body)
+			if err != nil {
+				_ = render.Render(w, r, util.NewErrorResponse(err.Error(), http.StatusBadRequest))
+				return
+			}
+
+			_, _ = w.Write(customResp)
 			return
 		}
 
@@ -235,6 +242,128 @@ func (a *ApplicationHandler) IngestEvent(w http.ResponseWriter, r *http.Request)
 	} else {
 		_ = render.Render(w, r, util.NewServerResponse("Event received", len(payload), http.StatusOK))
 	}
+}
+
+// extractValueFromNestedMap retrieves a value from a nested map based on a dot-separated key.
+func extractValueFromNestedMap(data map[string]interface{}, key string) (string, bool) {
+	parts := strings.Split(key, ".")
+	current := data
+
+	for i, part := range parts {
+		if value, exists := current[part]; exists {
+			if i == len(parts)-1 {
+				if str, ok := value.(string); ok {
+					return str, true
+				}
+				return fmt.Sprintf("%v", value), true
+			}
+			if nestedMap, ok := value.(map[string]interface{}); ok {
+				current = nestedMap
+			} else {
+				return "", false
+			}
+		} else {
+			return "", false
+		}
+	}
+
+	return "", false
+}
+
+// extractCustomBody processes the custom response body and returns a byte slice.
+func extractCustomBody(r *http.Request, customResponseContentType, customResponseContentBody string) ([]byte, error) {
+	switch customResponseContentType {
+	case "application/json":
+		// Parse the JSON template
+		var responseMap map[string]interface{}
+		if err := json.Unmarshal([]byte(customResponseContentBody), &responseMap); err != nil {
+			return nil, fmt.Errorf("invalid JSON response template: %v", err)
+		}
+
+		// Replace req.Headers.{field} placeholders
+		for key, values := range r.Header {
+			placeholder := fmt.Sprintf("req.Headers.%s", key)
+			replacePlaceholdersInMap(responseMap, placeholder, strings.Join(values, ","))
+		}
+
+		// Parse JSON body of the request
+		var bodyMap map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&bodyMap); err == nil {
+			placeholders := extractPlaceholders(customResponseContentBody, "req.Body")
+			for _, placeholder := range placeholders {
+				field := strings.TrimPrefix(placeholder, "req.Body.")
+				if value, exists := extractValueFromNestedMap(bodyMap, field); exists {
+					replacePlaceholdersInMap(responseMap, placeholder, value)
+				}
+			}
+		} else if err.Error() != "EOF" {
+			return nil, err
+		}
+
+		// Encode the modified map to JSON
+		return json.Marshal(responseMap)
+
+	case "text/plain":
+		// Replace req.Headers.{field} placeholders
+		for key, values := range r.Header {
+			placeholder := fmt.Sprintf("req.Headers.%s", key)
+			customResponseContentBody = strings.ReplaceAll(customResponseContentBody, placeholder, strings.Join(values, ","))
+		}
+
+		// Parse JSON body of the request for req.Body.{field} placeholders
+		var bodyMap map[string]interface{}
+		if err := json.NewDecoder(r.Body).Decode(&bodyMap); err == nil {
+			placeholders := extractPlaceholders(customResponseContentBody, "req.Body")
+			for _, placeholder := range placeholders {
+				field := strings.TrimPrefix(placeholder, "req.Body.")
+				if value, exists := extractValueFromNestedMap(bodyMap, field); exists {
+					customResponseContentBody = strings.ReplaceAll(customResponseContentBody, placeholder, value)
+				}
+			}
+		} else if err.Error() != "EOF" {
+			return nil, err
+		}
+
+		// Return the plain text response as bytes
+		return []byte(customResponseContentBody), nil
+
+	default:
+		return nil, errors.New("unsupported Content-Type")
+	}
+}
+
+// replacePlaceholdersInMap replaces placeholders in a map recursively.
+func replacePlaceholdersInMap(data map[string]interface{}, placeholder, value string) {
+	for key, v := range data {
+		switch typedValue := v.(type) {
+		case string:
+			if typedValue == placeholder {
+				data[key] = value
+			}
+		case map[string]interface{}:
+			replacePlaceholdersInMap(typedValue, placeholder, value)
+		}
+	}
+}
+
+// extractPlaceholders identifies placeholders with a specific prefix in the input text.
+func extractPlaceholders(text, prefix string) []string {
+	var placeholders []string
+	start := 0
+	for {
+		start = strings.Index(text[start:], prefix)
+		if start == -1 {
+			break
+		}
+		start += len(prefix)
+		end := start
+		for end < len(text) && (text[end] == '.' || text[end] == '_' || text[end] == '-' || (text[end] >= 'a' && text[end] <= 'z') || (text[end] >= 'A' && text[end] <= 'Z') || (text[end] >= '0' && text[end] <= '9')) {
+			end++
+		}
+		placeholders = append(placeholders, text[start-len(prefix):end])
+		start = end
+	}
+	return placeholders
 }
 
 const (
